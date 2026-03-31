@@ -1,0 +1,19 @@
+# Reelio — Backend Dependencies
+# Install with: pip install -r requirements.txt
+
+# API & Server
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-dotenv==1.0.1
+requests==2.31.0
+
+# ML Pipeline
+sentence-transformers==3.0.0
+faiss-cpu==1.13.2
+numpy==1.26.4
+
+# Anthropic
+anthropic==0.28.0
+
+# Utilities
+pydantic==2.7.1

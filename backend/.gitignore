@@ -1,0 +1,25 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# ML artifacts (large files — don't commit to GitHub)
+data/embeddings.npy
+data/movies.index
+
+# movies.json is okay to commit if small, but optional
+# data/movies.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
