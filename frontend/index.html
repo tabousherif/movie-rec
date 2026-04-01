@@ -9,604 +9,579 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
   <style>
     :root {
-      --black: #221f1f;
-      --cream: #f5f5f1;
-      --gold: #ffd557;
-      --vanilla: #ffeca8;
-      --gold-dim: rgba(255, 213, 87, 0.18);
-      --gold-glow: rgba(255, 213, 87, 0.35);
+      --black:      #221f1f;
+      --cream:      #f5f5f1;
+      --gold:       #ffd557;
+      --vanilla:    #ffeca8;
+      --gold-dim:   rgba(255,213,87,0.18);
+      --gold-glow:  rgba(255,213,87,0.35);
+      --API_BASE:   '';
     }
-
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
     body {
-      background: var(--black);
-      color: var(--cream);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      cursor: default;
+      background:var(--black); color:var(--cream);
+      font-family:'DM Sans',sans-serif;
+      min-height:100vh; overflow-x:hidden;
     }
 
     /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,213,87,0.25); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,213,87,0.45); }
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,213,87,0.25); border-radius:99px; }
+    ::-webkit-scrollbar-thumb:hover { background:rgba(255,213,87,0.45); }
 
-    /* ── CINEMATIC OVERLAY (fade to black between screens) ── */
+    /* ── CURTAIN ── */
     #curtain {
-      position: fixed; inset: 0; background: #000;
-      z-index: 999; pointer-events: none;
-      opacity: 0; transition: opacity 0.65s ease;
+      position:fixed; inset:0; background:#000;
+      z-index:999; pointer-events:none;
+      opacity:0; transition:opacity 0.65s ease;
     }
-    #curtain.show { opacity: 1; pointer-events: all; }
+    #curtain.show { opacity:1; pointer-events:all; }
 
     /* ══════════════════════════════
-       SPLASH SCREEN
+       SPLASH
     ══════════════════════════════ */
     #splash {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: var(--black);
-      z-index: 100;
-      overflow: hidden;
+      position:fixed; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      background:var(--black); z-index:100; overflow:hidden;
     }
-
-    /* ambient grain texture */
     #splash::before {
-      content: '';
-      position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none; opacity: 0.6;
+      content:''; position:absolute; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events:none; opacity:0.6;
     }
-
-    /* vignette */
     #splash::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
-      pointer-events: none;
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.7) 100%);
+      pointer-events:none;
     }
-
-    /* warm ambient bloom behind logo */
     .splash-bloom {
-      position: absolute;
-      width: 420px; height: 420px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,213,87,0.07) 0%, transparent 70%);
-      animation: bloomPulse 4s ease-in-out infinite;
-      pointer-events: none;
+      position:absolute; width:420px; height:420px; border-radius:50%;
+      background:radial-gradient(circle,rgba(255,213,87,0.07) 0%,transparent 70%);
+      animation:bloomPulse 4s ease-in-out infinite; pointer-events:none;
     }
-
     @keyframes bloomPulse {
-      0%, 100% { transform: scale(1); opacity: 0.6; }
-      50% { transform: scale(1.12); opacity: 1; }
+      0%,100% { transform:scale(1); opacity:0.6; }
+      50%      { transform:scale(1.12); opacity:1; }
     }
-
     .splash-content {
-      position: relative; z-index: 2;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 0;
-      opacity: 0;
-      animation: splashReveal 1.4s ease-out 0.6s forwards;
+      position:relative; z-index:2;
+      display:flex; flex-direction:column; align-items:center;
+      opacity:0; animation:splashReveal 1.4s ease-out 0.6s forwards;
     }
-
     @keyframes splashReveal {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
     }
-
-    /* ── LOGO LOCKUP ── */
     .logo-lockup {
-      position: relative;
-      width: 160px; height: 160px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 28px;
+      position:relative; width:160px; height:160px;
+      display:flex; align-items:center; justify-content:center;
+      margin-bottom:28px;
     }
-
     .logo-r {
-      font-family: 'DM Serif Display', serif;
-      font-size: 9rem;
-      line-height: 1;
-      color: var(--cream);
-      position: relative; z-index: 2;
-      letter-spacing: -4px;
-      text-shadow: 0 0 60px rgba(255,213,87,0.2);
-      /* Shift R slightly left so popcorn peeks right */
-      transform: translateX(-8px);
+      font-family:'DM Serif Display',serif; font-size:9rem; line-height:1;
+      color:var(--cream); position:relative; z-index:2; letter-spacing:-4px;
+      text-shadow:0 0 60px rgba(255,213,87,0.2);
+      transform:translateX(-8px);
     }
-
-    /* Popcorn bucket SVG sits behind the R */
     .logo-popcorn {
-      position: absolute;
-      bottom: 4px; right: 4px;
-      z-index: 1;
-      width: 72px; height: 72px;
-      filter: drop-shadow(0 0 12px rgba(255,213,87,0.5));
+      position:absolute; bottom:4px; right:4px; z-index:1;
+      width:72px; height:72px;
+      filter:drop-shadow(0 0 12px rgba(255,213,87,0.5));
     }
-
     .splash-wordmark {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2.4rem;
-      letter-spacing: 0.18em;
-      color: var(--cream);
-      margin-bottom: 6px;
+      font-family:'DM Serif Display',serif; font-size:2.4rem;
+      letter-spacing:0.18em; color:var(--cream); margin-bottom:6px;
     }
-
     .splash-tagline {
-      font-size: 0.8rem;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: rgba(245,245,241,0.35);
-      margin-bottom: 52px;
+      font-size:0.8rem; letter-spacing:0.28em; text-transform:uppercase;
+      color:rgba(245,245,241,0.35); margin-bottom:52px;
     }
-
     .enter-btn {
-      background: transparent;
-      border: 1.5px solid var(--gold);
-      color: var(--gold);
-      padding: 0.8rem 2.8rem;
-      border-radius: 999px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      box-shadow: 0 0 22px var(--gold-glow), inset 0 0 0 0 var(--gold);
-      transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-      opacity: 0;
-      animation: btnReveal 1s ease-out 2s forwards;
+      background:transparent; border:1.5px solid var(--gold);
+      color:var(--gold); padding:0.8rem 2.8rem; border-radius:999px;
+      font-family:'DM Sans',sans-serif; font-size:0.95rem; font-weight:500;
+      letter-spacing:0.1em; cursor:pointer;
+      box-shadow:0 0 22px var(--gold-glow);
+      transition:background 0.3s,color 0.3s,box-shadow 0.3s,transform 0.2s;
+      opacity:0; animation:btnReveal 1s ease-out 2s forwards;
     }
-
     @keyframes btnReveal {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity:0; transform:translateY(8px); }
+      to   { opacity:1; transform:translateY(0); }
     }
-
     .enter-btn:hover {
-      background: var(--gold);
-      color: var(--black);
-      box-shadow: 0 0 36px rgba(255,213,87,0.55);
-      transform: translateY(-2px);
+      background:var(--gold); color:var(--black);
+      box-shadow:0 0 36px rgba(255,213,87,0.55); transform:translateY(-2px);
     }
-
-    .enter-btn:active { transform: translateY(0); }
 
     /* ══════════════════════════════
        MAIN APP
     ══════════════════════════════ */
     #app {
-      display: none;
-      min-height: 100vh;
-      flex-direction: column;
-      opacity: 0;
-      transition: opacity 0.5s ease;
+      display:none; min-height:100vh;
+      flex-direction:column; opacity:0; transition:opacity 0.5s ease;
     }
-    #app.visible { opacity: 1; }
+    #app.visible { opacity:1; }
 
     /* ── NAVBAR ── */
     nav {
-      position: fixed; top: 0; left: 0; right: 0;
-      height: 56px; z-index: 50;
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      background: rgba(34,31,31,0.82);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid rgba(255,213,87,0.1);
+      position:fixed; top:0; left:0; right:0; height:56px; z-index:50;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 24px;
+      background:rgba(34,31,31,0.82); backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(255,213,87,0.1);
     }
-
-    .nav-logo {
-      display: flex; align-items: center; gap: 10px;
-    }
-
-    .nav-logo-icon {
-      position: relative; width: 32px; height: 32px;
-    }
-
+    .nav-logo { display:flex; align-items:center; gap:10px; cursor:pointer; }
+    .nav-logo-icon { position:relative; width:32px; height:32px; }
     .nav-r {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.6rem; line-height: 1;
-      color: var(--cream);
-      position: absolute; left: 0; top: 1px; z-index: 2;
+      font-family:'DM Serif Display',serif; font-size:1.6rem; line-height:1;
+      color:var(--cream); position:absolute; left:0; top:1px; z-index:2;
     }
-
     .nav-popcorn {
-      position: absolute; bottom: -1px; right: -2px;
-      width: 18px; height: 18px; z-index: 1;
-      filter: drop-shadow(0 0 4px rgba(255,213,87,0.6));
+      position:absolute; bottom:-1px; right:-2px;
+      width:18px; height:18px; z-index:1;
+      filter:drop-shadow(0 0 4px rgba(255,213,87,0.6));
     }
-
     .nav-wordmark {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.15rem;
-      letter-spacing: 0.08em;
-      color: var(--cream);
+      font-family:'DM Serif Display',serif; font-size:1.15rem;
+      letter-spacing:0.08em; color:var(--cream);
     }
-
-    .nav-actions {
-      display: flex; align-items: center; gap: 6px;
-    }
-
+    .nav-actions { display:flex; align-items:center; gap:6px; }
     .nav-btn {
-      background: transparent; border: none;
-      color: rgba(245,245,241,0.6);
-      padding: 8px;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: color 0.2s ease, background 0.2s ease;
-      display: flex; align-items: center; justify-content: center;
+      background:transparent; border:none;
+      color:rgba(245,245,241,0.6); padding:8px; border-radius:50%;
+      cursor:pointer; transition:color 0.2s,background 0.2s;
+      display:flex; align-items:center; justify-content:center;
     }
-    .nav-btn:hover, .nav-btn.active {
-      color: var(--gold);
-      background: rgba(255,213,87,0.1);
-    }
+    .nav-btn:hover, .nav-btn.active { color:var(--gold); background:rgba(255,213,87,0.1); }
 
-    /* ── MAIN CONTENT ── */
-    main {
-      flex: 1;
-      padding-top: 56px; /* navbar height */
-    }
+    /* ── MAIN ── */
+    main { flex:1; padding-top:56px; }
 
     /* ── SEARCH AREA ── */
     #search-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 80px 24px 0;
-      transition: padding 0.55s cubic-bezier(0.4,0,0.2,1);
+      display:flex; flex-direction:column; align-items:center;
+      padding:80px 24px 0;
+      transition:padding 0.55s cubic-bezier(0.4,0,0.2,1);
     }
+    #search-area.compact { padding:20px 24px 0; }
+    #search-area.compact .search-hero-text,
+    #search-area.compact .quick-tags { display:none; }
 
-    #search-area.compact {
-      padding: 20px 24px 0;
-    }
-
-    #search-area.compact .search-hero-text { display: none; }
-
-    .search-hero-text {
-      text-align: center;
-      margin-bottom: 36px;
-    }
-
+    .search-hero-text { text-align:center; margin-bottom:36px; }
     .search-hero-text h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: clamp(1.8rem, 4vw, 2.6rem);
-      color: var(--cream);
-      margin-bottom: 10px;
-      line-height: 1.2;
+      font-family:'DM Serif Display',serif;
+      font-size:clamp(1.8rem,4vw,2.6rem); color:var(--cream);
+      margin-bottom:10px; line-height:1.2;
     }
-
     .search-hero-text p {
-      font-size: 0.95rem;
-      color: rgba(245,245,241,0.45);
-      max-width: 420px;
-      line-height: 1.6;
+      font-size:0.95rem; color:rgba(245,245,241,0.45);
+      max-width:420px; line-height:1.6;
     }
 
+    /* ── SEED CHIPS ── */
+    .seed-chips {
+      display:flex; flex-wrap:wrap; gap:8px;
+      max-width:620px; width:100%; margin-bottom:12px;
+      min-height:0; transition:min-height 0.3s;
+    }
+    .seed-chip {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(255,213,87,0.12); border:1px solid rgba(255,213,87,0.35);
+      border-radius:999px; padding:5px 12px 5px 14px;
+      color:var(--gold); font-size:0.82rem; font-weight:500;
+    }
+    .seed-chip button {
+      background:none; border:none; color:rgba(255,213,87,0.6);
+      cursor:pointer; font-size:1rem; line-height:1; padding:0;
+      transition:color 0.15s;
+    }
+    .seed-chip button:hover { color:var(--gold); }
+
+    /* ── SEARCH BAR ── */
     .search-wrap {
-      position: relative;
-      width: 100%;
-      max-width: 620px;
-      transition: max-width 0.55s cubic-bezier(0.4,0,0.2,1);
+      position:relative; width:100%; max-width:620px;
+      transition:max-width 0.55s cubic-bezier(0.4,0,0.2,1);
     }
-
-    #search-area.compact .search-wrap {
-      max-width: 520px;
-    }
-
+    #search-area.compact .search-wrap { max-width:520px; }
     .search-icon {
-      position: absolute; left: 18px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--gold);
-      pointer-events: none;
-      transition: opacity 0.2s;
+      position:absolute; left:18px; top:50%; transform:translateY(-50%);
+      color:var(--gold); pointer-events:none;
     }
-
     #searchInput {
-      width: 100%;
-      background: rgba(255,255,255,0.06);
-      border: 1.5px solid rgba(255,213,87,0.28);
-      border-radius: 999px;
-      padding: 0.95rem 1.4rem 0.95rem 3.2rem;
-      color: var(--cream);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.975rem;
-      transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+      width:100%;
+      background:rgba(255,255,255,0.06);
+      border:1.5px solid rgba(255,213,87,0.28); border-radius:999px;
+      padding:0.95rem 1.4rem 0.95rem 3.2rem;
+      color:var(--cream); font-family:'DM Sans',sans-serif; font-size:0.975rem;
+      transition:border-color 0.3s,background 0.3s,box-shadow 0.3s;
     }
-
-    #searchInput::placeholder {
-      color: rgba(245,245,241,0.28);
-      font-style: italic;
-    }
-
+    #searchInput::placeholder { color:rgba(245,245,241,0.28); font-style:italic; }
     #searchInput:focus {
-      outline: none;
-      border-color: rgba(255,213,87,0.7);
-      background: rgba(255,255,255,0.09);
-      box-shadow: 0 0 0 4px rgba(255,213,87,0.08), 0 0 24px rgba(255,213,87,0.1);
+      outline:none; border-color:rgba(255,213,87,0.7);
+      background:rgba(255,255,255,0.09);
+      box-shadow:0 0 0 4px rgba(255,213,87,0.08),0 0 24px rgba(255,213,87,0.1);
     }
-
-    /* ambient pulse under search bar */
     .search-ambient {
-      position: absolute;
-      bottom: -20px; left: 50%; transform: translateX(-50%);
-      width: 60%; height: 40px;
-      background: radial-gradient(ellipse, rgba(255,213,87,0.06) 0%, transparent 70%);
-      pointer-events: none;
-      animation: searchPulse 4s ease-in-out infinite;
-      border-radius: 50%;
+      position:absolute; bottom:-20px; left:50%; transform:translateX(-50%);
+      width:60%; height:40px;
+      background:radial-gradient(ellipse,rgba(255,213,87,0.06) 0%,transparent 70%);
+      pointer-events:none;
+      animation:searchPulse 4s ease-in-out infinite; border-radius:50%;
+    }
+    @keyframes searchPulse {
+      0%,100% { opacity:0.6; transform:translateX(-50%) scaleX(1); }
+      50%      { opacity:1;   transform:translateX(-50%) scaleX(1.15); }
     }
 
-    @keyframes searchPulse {
-      0%, 100% { opacity: 0.6; transform: translateX(-50%) scaleX(1); }
-      50% { opacity: 1; transform: translateX(-50%) scaleX(1.15); }
+    /* ── AUTOCOMPLETE DROPDOWN ── */
+    #autocomplete {
+      position:absolute; top:calc(100% + 8px); left:0; right:0;
+      background:#2a2727; border:1px solid rgba(255,213,87,0.2);
+      border-radius:16px; overflow:hidden;
+      box-shadow:0 16px 48px rgba(0,0,0,0.5);
+      z-index:100; display:none;
+    }
+    #autocomplete.open { display:block; }
+    .autocomplete-item {
+      display:flex; align-items:center; gap:12px;
+      padding:10px 16px; cursor:pointer;
+      transition:background 0.15s;
+    }
+    .autocomplete-item:hover { background:rgba(255,213,87,0.08); }
+    .autocomplete-item img {
+      width:32px; height:48px; object-fit:cover; border-radius:4px;
+      flex-shrink:0; background:rgba(255,255,255,0.05);
+    }
+    .autocomplete-item-info { flex:1; min-width:0; }
+    .autocomplete-title {
+      font-size:0.88rem; font-weight:500; color:var(--cream);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .autocomplete-meta { font-size:0.74rem; color:rgba(245,245,241,0.4); margin-top:2px; }
+    .autocomplete-add {
+      font-size:0.72rem; color:var(--gold);
+      background:rgba(255,213,87,0.1); border:1px solid rgba(255,213,87,0.25);
+      border-radius:999px; padding:3px 10px; white-space:nowrap; flex-shrink:0;
+    }
+    .autocomplete-empty {
+      padding:16px; text-align:center;
+      font-size:0.85rem; color:rgba(245,245,241,0.35); font-style:italic;
     }
 
     /* ── QUICK TAGS ── */
     .quick-tags {
-      display: flex; flex-wrap: wrap;
-      justify-content: center; gap: 10px;
-      margin-top: 20px;
-      max-width: 620px;
-      width: 100%;
-      transition: opacity 0.3s ease;
+      display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
+      margin-top:20px; max-width:620px; width:100%;
     }
-
-    #search-area.compact .quick-tags { display: none; }
-
     .tag {
-      background: transparent;
-      border: 1px solid rgba(255,213,87,0.2);
-      border-radius: 999px;
-      padding: 6px 16px;
-      color: rgba(255,236,168,0.7);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.82rem;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      background:transparent; border:1px solid rgba(255,213,87,0.2);
+      border-radius:999px; padding:6px 16px;
+      color:rgba(255,236,168,0.7); font-family:'DM Sans',sans-serif;
+      font-size:0.82rem; letter-spacing:0.02em; cursor:pointer;
+      transition:all 0.2s;
+    }
+    .tag:hover {
+      background:rgba(255,213,87,0.1); border-color:rgba(255,213,87,0.45);
+      color:var(--vanilla);
     }
 
-    .tag:hover {
-      background: rgba(255,213,87,0.1);
-      border-color: rgba(255,213,87,0.45);
-      color: var(--vanilla);
+    /* ── PREFERENCES PANEL ── */
+    #prefs-panel {
+      max-width:620px; width:100%; margin:20px auto 0;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,213,87,0.12); border-radius:16px;
+      overflow:hidden; display:none;
     }
+    #prefs-panel.open { display:block; }
+    .prefs-inner { padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:500px) { .prefs-inner { grid-template-columns:1fr; } }
+    .pref-group label {
+      display:block; font-size:0.72rem; letter-spacing:0.08em;
+      text-transform:uppercase; color:rgba(245,245,241,0.4); margin-bottom:6px;
+    }
+    .pref-group select, .pref-group input {
+      width:100%; background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,213,87,0.18); border-radius:8px;
+      padding:8px 12px; color:var(--cream);
+      font-family:'DM Sans',sans-serif; font-size:0.875rem;
+      transition:border-color 0.2s;
+    }
+    .pref-group select option { background:#2a2727; }
+    .pref-group select:focus, .pref-group input:focus {
+      outline:none; border-color:rgba(255,213,87,0.5);
+    }
+    .pref-full { grid-column:1/-1; }
+    .recommend-btn {
+      grid-column:1/-1; margin-top:4px;
+      background:var(--gold); color:var(--black);
+      border:none; border-radius:999px; padding:0.75rem 2rem;
+      font-family:'DM Sans',sans-serif; font-size:0.95rem; font-weight:600;
+      cursor:pointer; letter-spacing:0.03em;
+      transition:background 0.2s,transform 0.15s,box-shadow 0.2s;
+      box-shadow:0 0 24px rgba(255,213,87,0.25);
+    }
+    .recommend-btn:hover {
+      background:var(--vanilla); transform:translateY(-1px);
+      box-shadow:0 0 32px rgba(255,213,87,0.4);
+    }
+    .recommend-btn:disabled {
+      opacity:0.5; cursor:not-allowed; transform:none;
+    }
+    .prefs-toggle {
+      display:flex; align-items:center; gap:8px;
+      background:none; border:none; color:rgba(245,245,241,0.4);
+      font-family:'DM Sans',sans-serif; font-size:0.8rem;
+      cursor:pointer; padding:0; margin-top:14px;
+      transition:color 0.2s;
+    }
+    .prefs-toggle:hover { color:var(--gold); }
 
     /* ── RESULTS HEADER ── */
     #results-header {
-      display: none;
-      padding: 28px 24px 16px;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
+      display:none; padding:28px 24px 16px;
+      max-width:1400px; margin:0 auto; width:100%;
     }
-
-    #results-header.visible { display: flex; align-items: baseline; gap: 12px; }
-
+    #results-header.visible { display:flex; align-items:baseline; gap:12px; }
     #results-label {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.4rem; color: var(--cream);
+      font-family:'DM Serif Display',serif; font-size:1.4rem; color:var(--cream);
     }
-
-    #results-count {
-      font-size: 0.82rem;
-      color: rgba(245,245,241,0.4);
-      letter-spacing: 0.05em;
-    }
+    #results-count { font-size:0.82rem; color:rgba(245,245,241,0.4); letter-spacing:0.05em; }
 
     /* ── MOVIE GRID ── */
-    #grid-container {
-      padding: 16px 24px 60px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
+    #grid-container { padding:16px 24px 60px; max-width:1400px; margin:0 auto; }
     #movieGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 20px;
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+      gap:20px;
     }
 
+    /* ── MOVIE CARD ── */
     .movie-card {
-      border-radius: 14px;
-      overflow: hidden;
-      background: rgba(34,31,31,0.5);
-      border: 1px solid rgba(255,213,87,0.08);
-      cursor: pointer;
-      transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
-      opacity: 0;
-      transform: translateY(22px);
-      animation: cardIn 0.5s ease forwards;
+      border-radius:14px; overflow:hidden;
+      background:rgba(34,31,31,0.5);
+      border:1px solid rgba(255,213,87,0.08);
+      cursor:pointer;
+      transition:transform 0.28s ease,box-shadow 0.28s,border-color 0.28s;
+      opacity:0; transform:translateY(22px);
+      animation:cardIn 0.5s ease forwards;
     }
-
     @keyframes cardIn {
-      to { opacity: 1; transform: translateY(0); }
+      to { opacity:1; transform:translateY(0); }
     }
-
     .movie-card:hover {
-      transform: translateY(-6px) scale(1.025);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,213,87,0.22);
-      border-color: rgba(255,213,87,0.22);
+      transform:translateY(-6px) scale(1.025);
+      box-shadow:0 16px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,213,87,0.22);
+      border-color:rgba(255,213,87,0.22);
     }
-
-    .poster-wrap {
-      position: relative;
-      aspect-ratio: 2/3;
-      overflow: hidden;
-    }
-
+    .poster-wrap { position:relative; aspect-ratio:2/3; overflow:hidden; }
     .poster-wrap img {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      transition: transform 0.5s ease;
-      display: block;
+      width:100%; height:100%; object-fit:cover;
+      transition:transform 0.5s; display:block;
     }
-
-    .movie-card:hover .poster-wrap img {
-      transform: scale(1.06);
-    }
-
+    .movie-card:hover .poster-wrap img { transform:scale(1.06); }
     .poster-gradient {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 55%;
-      background: linear-gradient(to top, rgba(34,31,31,0.95) 0%, transparent 100%);
-      pointer-events: none;
+      position:absolute; bottom:0; left:0; right:0; height:55%;
+      background:linear-gradient(to top,rgba(34,31,31,0.95) 0%,transparent 100%);
+      pointer-events:none;
     }
-
     .score-badge {
-      position: absolute; top: 10px; right: 10px;
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700;
-      background: rgba(22,20,20,0.88);
-      backdrop-filter: blur(4px);
-      letter-spacing: -0.3px;
+      position:absolute; top:10px; right:10px;
+      width:36px; height:36px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.7rem; font-weight:700;
+      background:rgba(22,20,20,0.88); backdrop-filter:blur(4px);
+      letter-spacing:-0.3px;
     }
-
-    .score-green  { border: 2px solid #4ade80; color: #4ade80; }
-    .score-gold   { border: 2px solid #ffd557; color: #ffd557; }
-    .score-orange { border: 2px solid #fb923c; color: #fb923c; }
-    .score-red    { border: 2px solid #f87171; color: #f87171; }
-
-    .card-body {
-      padding: 12px 12px 14px;
-    }
-
+    .score-green  { border:2px solid #4ade80; color:#4ade80; }
+    .score-gold   { border:2px solid #ffd557; color:#ffd557; }
+    .score-orange { border:2px solid #fb923c; color:#fb923c; }
+    .score-red    { border:2px solid #f87171; color:#f87171; }
+    .card-body { padding:12px 12px 14px; }
     .card-title {
-      font-size: 0.88rem; font-weight: 600;
-      color: var(--cream);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 5px;
+      font-size:0.88rem; font-weight:600; color:var(--cream);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:5px;
     }
-
     .card-meta {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 0.74rem;
-      color: rgba(245,245,241,0.45);
+      display:flex; align-items:center; gap:6px;
+      font-size:0.74rem; color:rgba(245,245,241,0.45);
+    }
+    .card-meta span { white-space:nowrap; }
+    .card-dot { opacity:0.35; }
+    .card-genre {
+      font-size:0.72rem; color:rgba(255,236,168,0.55); margin-top:6px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
 
-    .card-meta span { white-space: nowrap; }
-    .card-dot { opacity: 0.35; }
+    /* ── EXPLANATION BADGE ── */
+    .explanation-strip {
+      font-size:0.75rem; color:rgba(245,245,241,0.6);
+      padding:10px 12px; border-top:1px solid rgba(255,213,87,0.08);
+      line-height:1.5; display:none;
+    }
+    .has-explanation .explanation-strip { display:block; }
 
-    .card-genre {
-      font-size: 0.72rem;
-      color: rgba(255,236,168,0.55);
-      margin-top: 6px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    /* ── SKELETON LOADING ── */
+    .skeleton-card {
+      border-radius:14px; overflow:hidden;
+      background:rgba(34,31,31,0.5);
+      border:1px solid rgba(255,213,87,0.06);
+    }
+    .skeleton-poster {
+      aspect-ratio:2/3;
+      background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+      background-size:200% 100%;
+      animation:shimmer 1.6s infinite;
+    }
+    .skeleton-body { padding:12px; }
+    .skeleton-line {
+      height:10px; border-radius:6px; margin-bottom:8px;
+      background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+      background-size:200% 100%; animation:shimmer 1.6s infinite;
+    }
+    .skeleton-line.short { width:60%; }
+    @keyframes shimmer {
+      0%   { background-position:200% 0; }
+      100% { background-position:-200% 0; }
+    }
+
+    /* ── ERROR / EMPTY STATE ── */
+    .state-message {
+      text-align:center; padding:80px 24px;
+      color:rgba(245,245,241,0.35);
+    }
+    .state-message svg { margin:0 auto 12px; display:block; }
+    .state-message p { font-size:0.95rem; margin-top:8px; }
+    .state-message .hint {
+      font-size:0.82rem; color:rgba(245,245,241,0.22); margin-top:6px;
     }
 
     /* ── SETTINGS PANEL ── */
     #settingsPanel {
-      display: none;
-      padding: 40px 24px 60px;
-      max-width: 700px;
-      margin: 0 auto;
+      display:none; padding:40px 24px 60px;
+      max-width:700px; margin:0 auto;
     }
-
-    #settingsPanel.visible { display: block; }
-
+    #settingsPanel.visible { display:block; }
     .settings-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 36px;
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:36px;
     }
-
     .settings-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem; color: var(--cream);
+      font-family:'DM Serif Display',serif; font-size:2rem; color:var(--cream);
     }
-
     .close-settings {
-      background: none; border: none;
-      color: rgba(245,245,241,0.5);
-      cursor: pointer; font-size: 0.85rem;
-      display: flex; align-items: center; gap: 6px;
-      transition: color 0.2s;
-      font-family: 'DM Sans', sans-serif;
+      background:none; border:none; color:rgba(245,245,241,0.5);
+      cursor:pointer; font-size:0.85rem;
+      display:flex; align-items:center; gap:6px;
+      transition:color 0.2s; font-family:'DM Sans',sans-serif;
     }
-    .close-settings:hover { color: var(--gold); }
-
+    .close-settings:hover { color:var(--gold); }
     .settings-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,213,87,0.12);
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 16px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,213,87,0.12);
+      border-radius:16px; padding:28px; margin-bottom:16px;
     }
-
     .settings-card h3 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.2rem; color: var(--cream);
-      margin-bottom: 18px;
+      font-family:'DM Serif Display',serif; font-size:1.2rem;
+      color:var(--cream); margin-bottom:18px;
     }
-
     .settings-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 0.9rem; color: rgba(245,245,241,0.7);
+      display:flex; justify-content:space-between; align-items:center;
+      padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);
+      font-size:0.9rem; color:rgba(245,245,241,0.7);
     }
-    .settings-row:last-child { border-bottom: none; }
-
+    .settings-row:last-child { border-bottom:none; }
     .settings-chip {
-      font-size: 0.72rem;
-      background: rgba(255,213,87,0.12);
-      color: var(--gold);
-      border: 1px solid rgba(255,213,87,0.25);
-      padding: 3px 10px; border-radius: 999px;
+      font-size:0.72rem; background:rgba(255,213,87,0.12); color:var(--gold);
+      border:1px solid rgba(255,213,87,0.25); padding:3px 10px; border-radius:999px;
     }
 
-    /* ── EMPTY STATE ── */
-    .empty-state {
-      text-align: center; padding: 80px 24px;
-      color: rgba(245,245,241,0.35);
+    /* ── MODAL ── */
+    #modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.75);
+      backdrop-filter:blur(6px); z-index:200;
+      display:none; align-items:center; justify-content:center;
+      padding:24px;
     }
-    .empty-state p { font-size: 0.95rem; margin-top: 8px; }
-
-    /* ── POSTER FALLBACK COLORS ── */
-    .poster-fallback {
-      width: 100%; height: 100%;
-      display: flex; align-items: flex-end; justify-content: center;
-      padding-bottom: 20px;
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem;
-      color: rgba(255,213,87,0.3);
+    #modal-overlay.open { display:flex; }
+    #modal {
+      background:#2a2727; border:1px solid rgba(255,213,87,0.18);
+      border-radius:20px; max-width:560px; width:100%;
+      overflow:hidden; position:relative;
+      animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
     }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(0.92) translateY(20px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    .modal-poster-row {
+      display:flex; gap:0; position:relative;
+    }
+    .modal-poster {
+      width:140px; flex-shrink:0;
+      background:rgba(0,0,0,0.3);
+    }
+    .modal-poster img {
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
+    .modal-info {
+      flex:1; padding:24px 20px; display:flex; flex-direction:column;
+      justify-content:center;
+    }
+    .modal-title {
+      font-family:'DM Serif Display',serif; font-size:1.4rem;
+      color:var(--cream); line-height:1.2; margin-bottom:8px;
+    }
+    .modal-meta {
+      display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;
+    }
+    .modal-tag {
+      font-size:0.72rem; background:rgba(255,213,87,0.1);
+      border:1px solid rgba(255,213,87,0.2); color:var(--vanilla);
+      padding:3px 10px; border-radius:999px;
+    }
+    .modal-explanation {
+      font-size:0.85rem; line-height:1.65;
+      color:rgba(245,245,241,0.7); border-top:1px solid rgba(255,255,255,0.06);
+      padding-top:14px; margin-top:auto;
+    }
+    .modal-explanation-label {
+      font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em;
+      color:var(--gold); margin-bottom:6px;
+    }
+    .modal-close {
+      position:absolute; top:14px; right:14px;
+      background:rgba(34,31,31,0.8); border:none;
+      color:rgba(245,245,241,0.5); border-radius:50%;
+      width:30px; height:30px; display:flex; align-items:center;
+      justify-content:center; cursor:pointer; transition:color 0.2s;
+    }
+    .modal-close:hover { color:var(--cream); }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 600px) {
-      #movieGrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
-      #grid-container { padding: 12px 16px 50px; }
-      nav { padding: 0 16px; }
+    @media(max-width:600px) {
+      #movieGrid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; }
+      #grid-container { padding:12px 16px 50px; }
+      nav { padding:0 16px; }
+      .modal-poster { width:100px; }
+      .modal-title { font-size:1.15rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- Black curtain for cinematic transitions -->
 <div id="curtain"></div>
 
-<!-- ══════════════════════════════
-     SPLASH SCREEN
-══════════════════════════════ -->
+<!-- ══════ SPLASH ══════ -->
 <div id="splash">
   <div class="splash-bloom"></div>
-
   <div class="splash-content">
-    <!-- Logo Lockup -->
     <div class="logo-lockup">
-      <!-- The R -->
       <div class="logo-r">R</div>
-
-      <!-- Popcorn bucket peeking behind the R (inline SVG) -->
       <svg class="logo-popcorn" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Popcorn kernels overflowing top -->
         <ellipse cx="22" cy="18" rx="7" ry="6.5" fill="#ffd557"/>
         <ellipse cx="36" cy="14" rx="7.5" ry="7" fill="#ffeca8"/>
         <ellipse cx="50" cy="18" rx="6.5" ry="6" fill="#ffd557"/>
@@ -614,35 +589,26 @@
         <ellipse cx="56" cy="24" rx="5" ry="4.5" fill="#ffd557"/>
         <ellipse cx="29" cy="20" rx="6" ry="5.5" fill="#ffd557" opacity="0.8"/>
         <ellipse cx="44" cy="19" rx="5.5" ry="5" fill="#ffeca8" opacity="0.9"/>
-        <!-- Bucket body -->
         <path d="M14 32 L18 62 L54 62 L58 32 Z" fill="#ffd557"/>
-        <!-- Stripe detail -->
         <path d="M14 32 L18 62 L36 62 L36 32 Z" fill="#ffca24" opacity="0.5"/>
-        <!-- Bucket rim -->
         <rect x="11" y="28" width="50" height="8" rx="3" fill="#ffeca8"/>
-        <!-- Rim stripe -->
         <rect x="11" y="30" width="50" height="2" rx="1" fill="rgba(34,31,31,0.15)"/>
       </svg>
     </div>
-
     <div class="splash-wordmark">Reelio</div>
     <div class="splash-tagline">Discover · Explore · Enjoy</div>
-
     <button class="enter-btn" id="enterBtn">Enter</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════
-     MAIN APP
-══════════════════════════════ -->
+<!-- ══════ MAIN APP ══════ -->
 <div id="app">
 
-  <!-- Navbar -->
   <nav>
-    <div class="nav-logo">
+    <div class="nav-logo" id="navLogo">
       <div class="nav-logo-icon">
         <span class="nav-r">R</span>
-        <svg class="nav-popcorn" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="nav-popcorn" viewBox="0 0 72 72" fill="none">
           <ellipse cx="22" cy="18" rx="7" ry="6.5" fill="#ffd557"/>
           <ellipse cx="36" cy="14" rx="7.5" ry="7" fill="#ffeca8"/>
           <ellipse cx="50" cy="18" rx="6.5" ry="6" fill="#ffd557"/>
@@ -652,7 +618,6 @@
       </div>
       <span class="nav-wordmark">Reelio</span>
     </div>
-
     <div class="nav-actions">
       <button class="nav-btn active" id="homeBtn" title="Home">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -674,8 +639,11 @@
     <div id="search-area">
       <div class="search-hero-text">
         <h2>What are you in the mood for?</h2>
-        <p>Search by director, actor, genre, mood, or anything cinematic.</p>
+        <p>Add 1–2 seed movies, then let Reelio find what to watch next.</p>
       </div>
+
+      <!-- Seed chips appear here once user selects movies -->
+      <div class="seed-chips" id="seedChips"></div>
 
       <div class="search-wrap">
         <div class="search-icon">
@@ -684,13 +652,70 @@
           </svg>
         </div>
         <input
-          type="text"
-          id="searchInput"
-          placeholder="A director, actor, genre, movie… anything"
-          autocomplete="off"
-          spellcheck="false"
+          type="text" id="searchInput"
+          placeholder="Search a movie to use as a seed…"
+          autocomplete="off" spellcheck="false"
         />
         <div class="search-ambient"></div>
+        <!-- Autocomplete dropdown -->
+        <div id="autocomplete"></div>
+      </div>
+
+      <!-- Preferences toggle -->
+      <button class="prefs-toggle" id="prefsToggle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+        </svg>
+        <span id="prefsToggleLabel">Refine preferences</span>
+      </button>
+
+      <!-- Preferences panel -->
+      <div id="prefs-panel">
+        <div class="prefs-inner">
+          <div class="pref-group">
+            <label>Genre Mood</label>
+            <select id="prefGenre">
+              <option value="">Any genre</option>
+              <option>Action</option><option>Adventure</option>
+              <option>Animation</option><option>Comedy</option>
+              <option>Crime</option><option>Documentary</option>
+              <option>Drama</option><option>Fantasy</option>
+              <option>Horror</option><option>Mystery</option>
+              <option>Romance</option><option>Science Fiction</option>
+              <option>Thriller</option>
+            </select>
+          </div>
+          <div class="pref-group">
+            <label>Max Runtime</label>
+            <select id="prefRuntime">
+              <option value="">Any length</option>
+              <option value="90">Under 90 min</option>
+              <option value="120">Under 2 hours</option>
+              <option value="150">Under 2.5 hours</option>
+              <option value="180">Under 3 hours</option>
+            </select>
+          </div>
+          <div class="pref-group">
+            <label>Watching With</label>
+            <select id="prefGroup">
+              <option value="">Anyone</option>
+              <option>Alone</option>
+              <option>Date night</option>
+              <option>Friends</option>
+              <option>Family</option>
+              <option>Kids</option>
+            </select>
+          </div>
+          <div class="pref-group">
+            <label>Vibe</label>
+            <input type="text" id="prefMood" placeholder="e.g. mind-bending, feel-good…"/>
+          </div>
+          <div class="pref-group pref-full">
+            <button class="recommend-btn" id="recommendBtn" disabled>
+              Find My Movies
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="quick-tags">
@@ -711,12 +736,6 @@
     <!-- Movie Grid -->
     <div id="grid-container">
       <div id="movieGrid"></div>
-      <div id="emptyState" class="empty-state" style="display:none">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,213,87,0.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <p>No films found — try a different search.</p>
-      </div>
     </div>
 
     <!-- Settings Panel -->
@@ -730,237 +749,426 @@
           Close
         </button>
       </div>
-
       <div class="settings-card">
         <h3>Preferences</h3>
-        <div class="settings-row">
-          <span>Dark Mode</span>
-          <span class="settings-chip">Always On</span>
-        </div>
-        <div class="settings-row">
-          <span>Content Filtering</span>
-          <span class="settings-chip">Coming Soon</span>
-        </div>
-        <div class="settings-row">
-          <span>Default Genre</span>
-          <span class="settings-chip">Coming Soon</span>
-        </div>
+        <div class="settings-row"><span>Dark Mode</span><span class="settings-chip">Always On</span></div>
+        <div class="settings-row"><span>Content Filtering</span><span class="settings-chip">Coming Soon</span></div>
+        <div class="settings-row"><span>Default Genre</span><span class="settings-chip">Coming Soon</span></div>
       </div>
-
       <div class="settings-card">
         <h3>About Reelio</h3>
-        <div class="settings-row">
-          <span>Version</span>
-          <span class="settings-chip">0.1.0 Beta</span>
-        </div>
-        <div class="settings-row">
-          <span>Recommendation Engine</span>
-          <span class="settings-chip">ML + Semantic AI</span>
-        </div>
-        <div class="settings-row">
-          <span>Data Source</span>
-          <span class="settings-chip">TMDB</span>
-        </div>
+        <div class="settings-row"><span>Version</span><span class="settings-chip">0.1.0 Beta</span></div>
+        <div class="settings-row"><span>Recommendation Engine</span><span class="settings-chip">Embeddings + FAISS + Claude</span></div>
+        <div class="settings-row"><span>Data Source</span><span class="settings-chip">TMDB</span></div>
       </div>
     </div>
   </main>
 </div>
 
-<script>
-  // ── MOVIE DATA (mock — will be replaced by API) ──
-  const MOVIES = [
-    { id:1,  title:"Oppenheimer",         year:2023, genre:"Drama, History",    director:"Christopher Nolan",  score:92, duration:"3h 0m",  color:"#1a1a2e" },
-    { id:2,  title:"Parasite",            year:2019, genre:"Thriller, Drama",   director:"Bong Joon-ho",       score:97, duration:"2h 12m", color:"#1c1c1c" },
-    { id:3,  title:"Blade Runner 2049",   year:2017, genre:"Sci-Fi, Neo-Noir",  director:"Denis Villeneuve",   score:88, duration:"2h 44m", color:"#0d1117" },
-    { id:4,  title:"The Lighthouse",      year:2019, genre:"Horror, Drama",     director:"Robert Eggers",      score:74, duration:"1h 49m", color:"#111111" },
-    { id:5,  title:"Mulholland Drive",    year:2001, genre:"Mystery, Noir",     director:"David Lynch",        score:81, duration:"2h 27m", color:"#1a0a1e" },
-    { id:6,  title:"Mad Max: Fury Road",  year:2015, genre:"Action, Sci-Fi",    director:"George Miller",      score:90, duration:"2h 0m",  color:"#1f1008" },
-    { id:7,  title:"Hereditary",          year:2018, genre:"Horror, Drama",     director:"Ari Aster",          score:78, duration:"2h 7m",  color:"#0e0e0e" },
-    { id:8,  title:"Moonlight",           year:2016, genre:"Drama, Romance",    director:"Barry Jenkins",      score:94, duration:"1h 51m", color:"#071525" },
-    { id:9,  title:"Annihilation",        year:2018, genre:"Sci-Fi, Horror",    director:"Alex Garland",       score:72, duration:"1h 55m", color:"#0a1a0a" },
-    { id:10, title:"The Lobster",         year:2015, genre:"Dystopia, Romance", director:"Yorgos Lanthimos",   score:68, duration:"1h 59m", color:"#181818" },
-    { id:11, title:"Portrait of a Lady",  year:2019, genre:"Drama, Romance",    director:"Céline Sciamma",     score:86, duration:"2h 2m",  color:"#100808" },
-    { id:12, title:"Interstellar",        year:2014, genre:"Sci-Fi, Drama",     director:"Christopher Nolan",  score:87, duration:"2h 49m", color:"#05050f" },
-    { id:13, title:"The Favourite",       year:2018, genre:"Drama, History",    director:"Yorgos Lanthimos",   score:79, duration:"2h 0m",  color:"#111008" },
-    { id:14, title:"Drive",               year:2011, genre:"Crime, Thriller",   director:"Nicolas Winding Refn", score:83, duration:"1h 40m", color:"#0f0515" },
-    { id:15, title:"The Zone of Interest",year:2023, genre:"Drama, History",    director:"Jonathan Glazer",    score:85, duration:"1h 45m", color:"#141414" },
-    { id:16, title:"Everything Everywhere",year:2022, genre:"Sci-Fi, Comedy",   director:"Daniels",            score:95, duration:"2h 19m", color:"#0a0a1a" },
-  ];
-
-  // ── STATE ──
-  let appState = { view: 'home', query: '' };
-
-  // ── DOM ──
-  const curtain      = document.getElementById('curtain');
-  const splash       = document.getElementById('splash');
-  const app          = document.getElementById('app');
-  const enterBtn     = document.getElementById('enterBtn');
-  const homeBtn      = document.getElementById('homeBtn');
-  const settingsBtn  = document.getElementById('settingsBtn');
-  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-  const searchArea   = document.getElementById('search-area');
-  const searchInput  = document.getElementById('searchInput');
-  const movieGrid    = document.getElementById('movieGrid');
-  const emptyState   = document.getElementById('emptyState');
-  const resultsHeader = document.getElementById('results-header');
-  const resultsLabel = document.getElementById('results-label');
-  const resultsCount = document.getElementById('results-count');
-  const settingsPanel = document.getElementById('settingsPanel');
-  const gridContainer = document.getElementById('grid-container');
-
-  // ── SCORE HELPERS ──
-  function scoreClass(s) {
-    if (s >= 75) return 'score-green';
-    if (s >= 50) return 'score-gold';
-    if (s >= 25) return 'score-orange';
-    return 'score-red';
-  }
-
-  // ── POSTER (gradient fallback since we have no real images yet) ──
-  function posterHTML(movie) {
-    // Use picsum with a seeded ID for consistent "posters"
-    const img = `https://picsum.photos/seed/reelio${movie.id}/300/450`;
-    return `
-      <img
-        src="${img}"
-        alt="${movie.title}"
-        loading="lazy"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-      />
-      <div class="poster-fallback" style="background:linear-gradient(160deg, ${movie.color} 0%, #221f1f 100%); display:none;">
-        🎬
+<!-- ══════ MODAL ══════ -->
+<div id="modal-overlay">
+  <div id="modal">
+    <button class="modal-close" id="modalClose">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <div class="modal-poster-row">
+      <div class="modal-poster"><img id="modalPoster" src="" alt=""/></div>
+      <div class="modal-info">
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-meta" id="modalMeta"></div>
+        <div class="modal-explanation" id="modalExplanation" style="display:none">
+          <div class="modal-explanation-label">Why Reelio picked this</div>
+          <div id="modalExplanationText"></div>
+        </div>
       </div>
-    `;
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// Change API_BASE to your Render URL once deployed.
+// ══════════════════════════════════════════════════════════════════════════════
+const API_BASE = 'http://localhost:8000';
+const USE_MOCK = false;   // flip to true to skip Claude API calls during dev
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let seeds     = [];   // array of { id, title, release_year, genre_string, poster_url }
+let lastRecs  = [];   // last set of recommendations for modal
+let prefsOpen = false;
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const curtain        = document.getElementById('curtain');
+const splash         = document.getElementById('splash');
+const app            = document.getElementById('app');
+const enterBtn       = document.getElementById('enterBtn');
+const homeBtn        = document.getElementById('homeBtn');
+const settingsBtn    = document.getElementById('settingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const navLogo        = document.getElementById('navLogo');
+const searchArea     = document.getElementById('search-area');
+const searchInput    = document.getElementById('searchInput');
+const autocomplete   = document.getElementById('autocomplete');
+const seedChips      = document.getElementById('seedChips');
+const recommendBtn   = document.getElementById('recommendBtn');
+const prefsToggle    = document.getElementById('prefsToggle');
+const prefsToggleLabel = document.getElementById('prefsToggleLabel');
+const prefsPanel     = document.getElementById('prefs-panel');
+const prefGenre      = document.getElementById('prefGenre');
+const prefRuntime    = document.getElementById('prefRuntime');
+const prefGroup      = document.getElementById('prefGroup');
+const prefMood       = document.getElementById('prefMood');
+const movieGrid      = document.getElementById('movieGrid');
+const resultsHeader  = document.getElementById('results-header');
+const resultsLabel   = document.getElementById('results-label');
+const resultsCount   = document.getElementById('results-count');
+const settingsPanel  = document.getElementById('settingsPanel');
+const gridContainer  = document.getElementById('grid-container');
+const modalOverlay   = document.getElementById('modal-overlay');
+const modalClose     = document.getElementById('modalClose');
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function scoreClass(s) {
+  if (s >= 7.5) return 'score-green';
+  if (s >= 6)   return 'score-gold';
+  if (s >= 4.5) return 'score-orange';
+  return 'score-red';
+}
+
+function scoreDisplay(vote_average) {
+  if (!vote_average) return '?';
+  return Math.round(vote_average * 10);
+}
+
+function runtimeStr(mins) {
+  if (!mins) return null;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m > 0 ? m + 'm' : ''}`.trim() : `${m}m`;
+}
+
+function showSkeletons(count = 5) {
+  movieGrid.innerHTML = Array.from({length: count}, () => `
+    <div class="skeleton-card">
+      <div class="skeleton-poster"></div>
+      <div class="skeleton-body">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showError(msg, hint = '') {
+  movieGrid.innerHTML = `
+    <div class="state-message" style="grid-column:1/-1">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+           stroke="rgba(255,213,87,0.3)" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p>${msg}</p>
+      ${hint ? `<p class="hint">${hint}</p>` : ''}
+    </div>`;
+}
+
+// ── SEED MANAGEMENT ───────────────────────────────────────────────────────────
+function renderSeeds() {
+  seedChips.innerHTML = seeds.map(s => `
+    <div class="seed-chip">
+      <span>${s.title}</span>
+      <button onclick="removeSeed(${s.id})" title="Remove">×</button>
+    </div>
+  `).join('');
+  recommendBtn.disabled = seeds.length === 0;
+
+  // Update placeholder text
+  if (seeds.length >= 2) {
+    searchInput.placeholder = 'Max 2 seeds selected';
+    searchInput.disabled = true;
+  } else {
+    searchInput.placeholder = seeds.length === 1
+      ? 'Add one more seed movie (optional)…'
+      : 'Search a movie to use as a seed…';
+    searchInput.disabled = false;
   }
+}
 
-  // ── RENDER CARDS ──
-  function renderMovies(list) {
-    movieGrid.innerHTML = '';
-    emptyState.style.display = 'none';
+function addSeed(movie) {
+  if (seeds.length >= 2) return;
+  if (seeds.find(s => s.id === movie.id)) return;
+  seeds.push(movie);
+  renderSeeds();
+  searchInput.value = '';
+  closeAutocomplete();
+  // Auto-open prefs panel once first seed is added
+  if (seeds.length === 1 && !prefsOpen) togglePrefs();
+}
 
-    if (list.length === 0) {
-      emptyState.style.display = 'block';
+window.removeSeed = function(id) {
+  seeds = seeds.filter(s => s.id !== id);
+  renderSeeds();
+};
+
+// ── AUTOCOMPLETE ──────────────────────────────────────────────────────────────
+let acDebounce;
+
+function closeAutocomplete() {
+  autocomplete.classList.remove('open');
+  autocomplete.innerHTML = '';
+}
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  if (!q) { closeAutocomplete(); return; }
+  clearTimeout(acDebounce);
+  acDebounce = setTimeout(() => fetchAutocomplete(q), 250);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAutocomplete();
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) closeAutocomplete();
+});
+
+async function fetchAutocomplete(q) {
+  try {
+    const res  = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}&limit=6`);
+    const data = await res.json();
+
+    if (!data.length) {
+      autocomplete.innerHTML = `<div class="autocomplete-empty">No matches found</div>`;
+      autocomplete.classList.add('open');
       return;
     }
 
-    list.forEach((movie, i) => {
-      const card = document.createElement('div');
-      card.className = 'movie-card';
-      card.style.animationDelay = `${i * 45}ms`;
-      card.innerHTML = `
-        <div class="poster-wrap">
-          ${posterHTML(movie)}
-          <div class="poster-gradient"></div>
-          <div class="score-badge ${scoreClass(movie.score)}">${movie.score}</div>
+    autocomplete.innerHTML = data.map(m => `
+      <div class="autocomplete-item" onclick="addSeed(${JSON.stringify(m).replace(/"/g, '&quot;')})">
+        <img
+          src="${m.poster_url || ''}"
+          onerror="this.style.background='rgba(255,213,87,0.05)'; this.src=''"
+          alt="${m.title}"
+        />
+        <div class="autocomplete-item-info">
+          <div class="autocomplete-title">${m.title}</div>
+          <div class="autocomplete-meta">${m.release_year || ''}${m.genre_string ? ' · ' + m.genre_string : ''}</div>
         </div>
-        <div class="card-body">
-          <div class="card-title">${movie.title}</div>
-          <div class="card-meta">
-            <span>${movie.year}</span>
-            <span class="card-dot">•</span>
-            <span>${movie.duration}</span>
-          </div>
-          <div class="card-genre">${movie.genre}</div>
-        </div>
-      `;
-      movieGrid.appendChild(card);
-    });
+        <span class="autocomplete-add">+ Add</span>
+      </div>
+    `).join('');
+    autocomplete.classList.add('open');
+  } catch {
+    closeAutocomplete();
   }
+}
 
-  // ── SEARCH ──
-  function doSearch(q) {
-    q = q.trim();
-    appState.query = q;
+// ── QUICK TAGS (search shortcut, not seeds) ───────────────────────────────────
+document.querySelectorAll('.tag').forEach(tag => {
+  tag.addEventListener('click', () => {
+    searchInput.value = tag.dataset.query;
+    searchInput.focus();
+    fetchAutocomplete(tag.dataset.query);
+  });
+});
 
-    // Compact search bar upward
-    if (q) {
-      searchArea.classList.add('compact');
-      resultsHeader.classList.add('visible');
-    } else {
-      searchArea.classList.remove('compact');
-      resultsHeader.classList.remove('visible');
+// ── PREFERENCES PANEL ────────────────────────────────────────────────────────
+function togglePrefs() {
+  prefsOpen = !prefsOpen;
+  prefsPanel.classList.toggle('open', prefsOpen);
+  prefsToggleLabel.textContent = prefsOpen ? 'Hide preferences' : 'Refine preferences';
+}
+prefsToggle.addEventListener('click', togglePrefs);
+
+// ── RECOMMEND ─────────────────────────────────────────────────────────────────
+recommendBtn.addEventListener('click', doRecommend);
+
+async function doRecommend() {
+  if (!seeds.length) return;
+
+  const seedPayload = seeds.map(s => ({ id: s.id, title: s.title }));
+  const preferences = {};
+  if (prefGenre.value)   preferences.genre = prefGenre.value;
+  if (prefRuntime.value) preferences.runtime_max = parseInt(prefRuntime.value);
+  if (prefGroup.value)   preferences.group = prefGroup.value;
+  if (prefMood.value)    preferences.mood = prefMood.value.trim();
+
+  // ── Compact UI ──
+  searchArea.classList.add('compact');
+  settingsPanel.classList.remove('visible');
+  gridContainer.style.display = 'block';
+  resultsHeader.classList.add('visible');
+  resultsLabel.textContent = `Finding films for you…`;
+  resultsCount.textContent = '';
+
+  showSkeletons(5);
+
+  recommendBtn.disabled = true;
+  recommendBtn.textContent = 'Finding…';
+
+  try {
+    const res = await fetch(`${API_BASE}/recommend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seeds: seedPayload,
+        preferences,
+        use_mock: USE_MOCK,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${res.status}`);
     }
 
-    const lower = q.toLowerCase();
-    const filtered = q
-      ? MOVIES.filter(m =>
-          m.title.toLowerCase().includes(lower) ||
-          m.director.toLowerCase().includes(lower) ||
-          m.genre.toLowerCase().includes(lower) ||
-          m.year.toString().includes(lower)
-        )
-      : MOVIES;
+    const data = await res.json();
+    lastRecs = data.recommendations;
 
-    resultsLabel.textContent = q ? `Results for "${q}"` : 'Discover';
-    resultsCount.textContent = `${filtered.length} film${filtered.length !== 1 ? 's' : ''}`;
+    resultsLabel.textContent = `Recommended for you`;
+    resultsCount.textContent = `${lastRecs.length} film${lastRecs.length !== 1 ? 's' : ''}`;
 
-    renderMovies(filtered);
+    renderRecommendations(lastRecs);
+  } catch (err) {
+    showError('Something went wrong.', err.message || 'Check that the backend server is running.');
+    resultsLabel.textContent = 'Error';
+  } finally {
+    recommendBtn.disabled  = false;
+    recommendBtn.textContent = 'Find My Movies';
+  }
+}
+
+// ── RENDER RECOMMENDATIONS ────────────────────────────────────────────────────
+function renderRecommendations(recs) {
+  movieGrid.innerHTML = '';
+
+  if (!recs.length) {
+    showError('No recommendations found.', 'Try different seed movies or preferences.');
+    return;
   }
 
-  // ── VIEWS ──
-  function showHome() {
-    settingsPanel.classList.remove('visible');
-    gridContainer.style.display = 'block';
-    searchArea.style.display = 'flex';
-    homeBtn.classList.add('active');
-    settingsBtn.classList.remove('active');
-    appState.view = 'home';
+  recs.forEach((movie, i) => {
+    const score    = scoreDisplay(movie.vote_average);
+    const sClass   = scoreClass(movie.vote_average || 0);
+    const runtime  = runtimeStr(movie.runtime);
+    const hasExp   = !!movie.explanation;
 
-    // Reset search
-    searchInput.value = '';
-    doSearch('');
+    const card = document.createElement('div');
+    card.className = `movie-card${hasExp ? ' has-explanation' : ''}`;
+    card.style.animationDelay = `${i * 60}ms`;
+    card.dataset.idx = i;
+
+    card.innerHTML = `
+      <div class="poster-wrap">
+        <img
+          src="${movie.poster_url || ''}"
+          alt="${movie.title}"
+          loading="lazy"
+          onerror="this.style.display='none'"
+        />
+        <div class="poster-gradient"></div>
+        <div class="score-badge ${sClass}">${score}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${movie.title}</div>
+        <div class="card-meta">
+          <span>${movie.release_year || '—'}</span>
+          ${runtime ? `<span class="card-dot">•</span><span>${runtime}</span>` : ''}
+        </div>
+        <div class="card-genre">${movie.genre_string || ''}</div>
+      </div>
+      ${hasExp ? `<div class="explanation-strip">${movie.explanation}</div>` : ''}
+    `;
+
+    card.addEventListener('click', () => openModal(i));
+    movieGrid.appendChild(card);
+  });
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(idx) {
+  const m = lastRecs[idx];
+  if (!m) return;
+
+  document.getElementById('modalPoster').src = m.poster_url || '';
+  document.getElementById('modalTitle').textContent = m.title;
+
+  const metaEl = document.getElementById('modalMeta');
+  const tags = [];
+  if (m.release_year) tags.push(m.release_year);
+  if (m.runtime)      tags.push(runtimeStr(m.runtime));
+  if (m.vote_average) tags.push(`★ ${m.vote_average}`);
+  if (m.genre_string) m.genre_string.split(',').slice(0,3).forEach(g => tags.push(g.trim()));
+  metaEl.innerHTML = tags.map(t => `<span class="modal-tag">${t}</span>`).join('');
+
+  const expEl   = document.getElementById('modalExplanation');
+  const expText = document.getElementById('modalExplanationText');
+  if (m.explanation) {
+    expText.textContent = m.explanation;
+    expEl.style.display = 'block';
+  } else {
+    expEl.style.display = 'none';
   }
 
-  function showSettings() {
-    settingsPanel.classList.add('visible');
-    gridContainer.style.display = 'none';
-    searchArea.style.display = 'none';
-    resultsHeader.classList.remove('visible');
-    homeBtn.classList.remove('active');
-    settingsBtn.classList.add('active');
-    appState.view = 'settings';
-  }
+  modalOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 
-  // ── SPLASH → APP TRANSITION ──
-  enterBtn.addEventListener('click', () => {
-    // Fade to black
-    curtain.classList.add('show');
+function closeModal() {
+  modalOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── VIEWS ─────────────────────────────────────────────────────────────────────
+function showHome() {
+  settingsPanel.classList.remove('visible');
+  gridContainer.style.display = 'block';
+  searchArea.style.display = 'flex';
+  homeBtn.classList.add('active');
+  settingsBtn.classList.remove('active');
+}
+
+function showSettings() {
+  settingsPanel.classList.add('visible');
+  gridContainer.style.display = 'none';
+  searchArea.style.display = 'none';
+  resultsHeader.classList.remove('visible');
+  homeBtn.classList.remove('active');
+  settingsBtn.classList.add('active');
+}
+
+homeBtn.addEventListener('click', showHome);
+navLogo.addEventListener('click', showHome);
+settingsBtn.addEventListener('click', showSettings);
+closeSettingsBtn.addEventListener('click', showHome);
+
+// ── SPLASH → APP ──────────────────────────────────────────────────────────────
+enterBtn.addEventListener('click', () => {
+  curtain.classList.add('show');
+  setTimeout(() => {
+    splash.style.display = 'none';
+    app.style.display    = 'flex';
     setTimeout(() => {
-      splash.style.display = 'none';
-      app.style.display = 'flex';
-      // Fade in app
-      setTimeout(() => {
-        curtain.classList.remove('show');
-        app.classList.add('visible');
-        renderMovies(MOVIES);
-        setTimeout(() => searchInput.focus(), 400);
-      }, 80);
-    }, 650);
-  });
-
-  homeBtn.addEventListener('click', showHome);
-  settingsBtn.addEventListener('click', showSettings);
-  closeSettingsBtn.addEventListener('click', showHome);
-
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSearch(searchInput.value);
-  });
-
-  // Live filter as you type (debounced)
-  let searchTimeout;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => doSearch(searchInput.value), 320);
-  });
-
-  // Quick tags
-  document.querySelectorAll('.tag').forEach(tag => {
-    tag.addEventListener('click', () => {
-      const q = tag.dataset.query;
-      searchInput.value = q;
-      doSearch(q);
-    });
-  });
+      curtain.classList.remove('show');
+      app.classList.add('visible');
+      setTimeout(() => searchInput.focus(), 400);
+    }, 80);
+  }, 650);
+});
 </script>
 </body>
 </html>
