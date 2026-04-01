@@ -416,6 +416,10 @@
       font-size:0.72rem; color:rgba(255,236,168,0.55); margin-top:6px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
+    .card-stars {
+      font-size:0.65rem; color:rgba(255,213,87,0.55); margin-top:5px;
+      letter-spacing:1px;
+    }
 
     /* ── EXPLANATION BADGE ── */
     .explanation-strip {
@@ -832,15 +836,23 @@ const modalClose     = document.getElementById('modalClose');
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function scoreClass(s) {
-  if (s >= 7.5) return 'score-green';
-  if (s >= 6)   return 'score-gold';
-  if (s >= 4.5) return 'score-orange';
+  if (s >= 75) return 'score-green';
+  if (s >= 55) return 'score-gold';
+  if (s >= 35) return 'score-orange';
   return 'score-red';
 }
 
-function scoreDisplay(vote_average) {
-  if (!vote_average) return '?';
-  return Math.round(vote_average * 10);
+function recScoreDisplay(movie) {
+  // Use rec_score (1-100) if available, fallback to vote_average scaled
+  if (movie.rec_score != null) return movie.rec_score;
+  if (movie.vote_average != null) return Math.round(movie.vote_average * 10);
+  return '?';
+}
+
+function starRating(vote_average) {
+  if (!vote_average) return '';
+  const stars = Math.round(vote_average / 2);  // 0-10 → 0-5
+  return '★'.repeat(stars) + '☆'.repeat(5 - stars);
 }
 
 function runtimeStr(mins) {
@@ -1053,11 +1065,17 @@ function renderRecommendations(recs) {
     return;
   }
 
-  recs.forEach((movie, i) => {
-    const score    = scoreDisplay(movie.vote_average);
-    const sClass   = scoreClass(movie.vote_average || 0);
-    const runtime  = runtimeStr(movie.runtime);
-    const hasExp   = !!movie.explanation;
+  // Sort by rec_score descending so highest scores always appear first
+  const sorted = [...recs].sort((a, b) => (b.rec_score || 0) - (a.rec_score || 0));
+  // Update lastRecs to sorted order so modal idx aligns
+  lastRecs = sorted;
+
+  sorted.forEach((movie, i) => {
+    const score   = recScoreDisplay(movie);
+    const sClass  = scoreClass(typeof score === 'number' ? score : 0);
+    const runtime = runtimeStr(movie.runtime);
+    const hasExp  = !!movie.explanation;
+    const stars   = starRating(movie.vote_average);
 
     const card = document.createElement('div');
     card.className = `movie-card${hasExp ? ' has-explanation' : ''}`;
@@ -1082,6 +1100,7 @@ function renderRecommendations(recs) {
           ${runtime ? `<span class="card-dot">•</span><span>${runtime}</span>` : ''}
         </div>
         <div class="card-genre">${movie.genre_string || ''}</div>
+        ${stars ? `<div class="card-stars">${stars}</div>` : ''}
       </div>
       ${hasExp ? `<div class="explanation-strip">${movie.explanation}</div>` : ''}
     `;
@@ -1103,7 +1122,8 @@ function openModal(idx) {
   const tags = [];
   if (m.release_year) tags.push(m.release_year);
   if (m.runtime)      tags.push(runtimeStr(m.runtime));
-  if (m.vote_average) tags.push(`★ ${m.vote_average}`);
+  if (m.rec_score != null) tags.push(`Rec Score: ${m.rec_score}/100`);
+  if (m.vote_average) tags.push(`TMDB: ${m.vote_average}/10`);
   if (m.genre_string) m.genre_string.split(',').slice(0,3).forEach(g => tags.push(g.trim()));
   metaEl.innerHTML = tags.map(t => `<span class="modal-tag">${t}</span>`).join('');
 

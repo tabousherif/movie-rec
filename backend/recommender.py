@@ -3,6 +3,10 @@ recommender.py
 ──────────────
 Core ML retrieval layer. Loads artifacts once at startup, exposes
 search_movies() and get_candidates() for use by main.py.
+
+Each candidate dict now includes a `rec_score` field (1–100) derived
+from FAISS cosine similarity, normalized relative to the current batch.
+The top candidate in every batch always scores 100; the rest scale down.
 """
 
 import json
@@ -17,7 +21,7 @@ MODEL_NAME       = "all-MiniLM-L6-v2"
 FAISS_INDEX_PATH = Path("data/movies.index")
 MOVIE_INDEX_PATH = Path("data/movie_index.json")
 EMBEDDINGS_PATH  = Path("data/embeddings.npy")
-FAISS_CANDIDATES = 25
+FAISS_CANDIDATES = 30   # fetch a few extra so dedup + Claude have room to work
 
 # ── STARTUP ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +53,6 @@ _id_lookup: dict[int, int] = {
 # ── HELPERS ──────────────────────────────────────────────────────────────────
 
 def _safe_str(val, fallback: str = "") -> str:
-    """Return val as a string, or fallback if None/empty."""
     if val is None:
         return fallback
     s = str(val).strip()
@@ -63,11 +66,9 @@ def _find_by_id(tmdb_id: int) -> dict | None:
 
 def _find_by_title(title: str) -> dict | None:
     lower = title.lower().strip()
-    # 1. Exact
     idx = _title_lookup.get(lower)
     if idx is not None:
         return _movie_index[idx]
-    # 2. Partial
     for stored, idx in _title_lookup.items():
         if lower in stored:
             return _movie_index[idx]
@@ -81,6 +82,36 @@ def _get_vec(array_idx: int) -> np.ndarray:
 def _encode(text: str) -> np.ndarray:
     vec = _model.encode([text], normalize_embeddings=True, convert_to_numpy=True)
     return vec[0].astype(np.float32)
+
+
+def _normalize_scores(candidates: list[dict]) -> list[dict]:
+    """
+    Convert raw FAISS cosine similarity scores into a 1–100 rec_score.
+
+    Strategy:
+      - The highest-scoring candidate in the batch gets 100.
+      - The lowest gets a floor of 55 (so even the weakest pick looks reasonable).
+      - Everything in between scales linearly.
+      - This means scores reflect relative strength within the recommendation set,
+        not an absolute quality measure — which is the honest framing.
+    """
+    if not candidates:
+        return candidates
+
+    SCORE_FLOOR = 55
+    SCORE_CEIL  = 100
+
+    raw_scores = [c["similarity_score"] for c in candidates]
+    lo, hi     = min(raw_scores), max(raw_scores)
+
+    for c in candidates:
+        if hi == lo:
+            c["rec_score"] = SCORE_CEIL
+        else:
+            normalized = (c["similarity_score"] - lo) / (hi - lo)
+            c["rec_score"] = round(SCORE_FLOOR + normalized * (SCORE_CEIL - SCORE_FLOOR))
+
+    return candidates
 
 
 # ── PUBLIC API ────────────────────────────────────────────────────────────────
@@ -112,36 +143,36 @@ def get_candidates(
     k: int = FAISS_CANDIDATES,
 ) -> tuple[list[dict], list[str]]:
     """
-    Resolve seeds → embedding vectors → FAISS search → candidate list.
+    Resolve seeds → embedding vectors → FAISS search → normalized candidates.
     Returns (candidates, resolved_titles).
+
+    Guarantees:
+      - No duplicate movie ids in the returned candidate list.
+      - Every candidate has a `rec_score` (1–100) and safe string fields.
     """
-    seed_movies:     list[dict]      = []
+    seed_movies:     list[dict]       = []
     freetext_vecs:   list[np.ndarray] = []
-    resolved_titles: list[str]       = []
+    resolved_titles: list[str]        = []
 
     ids        = seed_ids or []
     padded_ids = ids + [None] * max(0, len(seed_titles) - len(ids))
 
-    print(f"[get_candidates] seeds received: {list(zip(padded_ids, seed_titles))}")
+    print(f"[get_candidates] seeds: {list(zip(padded_ids, seed_titles))}")
 
     for tmdb_id, title in zip(padded_ids, seed_titles):
         movie = None
-
-        # 1. id-based lookup (exact, fast)
         if tmdb_id is not None:
             movie = _find_by_id(int(tmdb_id))
             if movie:
-                print(f"  ✓ id lookup  {tmdb_id} → '{movie['title']}'")
+                print(f"  ✓ id {tmdb_id} → '{movie['title']}'")
             else:
-                print(f"  ✗ id {tmdb_id} not in index — trying title fallback")
-
-        # 2. title-based fallback
+                print(f"  ✗ id {tmdb_id} not found, trying title")
         if movie is None:
             movie = _find_by_title(title)
             if movie:
-                print(f"  ✓ title lookup '{title}' → '{movie['title']}'")
+                print(f"  ✓ title '{title}' → '{movie['title']}'")
             else:
-                print(f"  ✗ title '{title}' not matched — using freetext encode")
+                print(f"  ✗ '{title}' unresolved, using freetext encode")
 
         if movie:
             seed_movies.append(movie)
@@ -149,44 +180,55 @@ def get_candidates(
         else:
             freetext_vecs.append(_encode(title))
 
-    print(f"  resolved: {resolved_titles}, freetext_vecs: {len(freetext_vecs)}")
-
     # Build query vector
     if not seed_movies and not freetext_vecs:
         if fallback_query:
-            print(f"  using fallback_query: '{fallback_query}'")
+            print(f"  fallback_query: '{fallback_query}'")
             query_vec = _encode(fallback_query).reshape(1, -1)
         else:
-            print("  ERROR: nothing to query with")
+            print("  ERROR: nothing to query")
             return [], []
     else:
-        all_vecs = [_get_vec(m["array_idx"]) for m in seed_movies] + freetext_vecs
-        averaged = np.array(all_vecs, dtype=np.float32).mean(axis=0, keepdims=True)
+        all_vecs  = [_get_vec(m["array_idx"]) for m in seed_movies] + freetext_vecs
+        averaged  = np.array(all_vecs, dtype=np.float32).mean(axis=0, keepdims=True)
         faiss.normalize_L2(averaged)
         query_vec = averaged
 
-    # FAISS search — retrieve extra so we can filter seeds out
-    fetch_k = k + len(seed_movies) + 5
-    scores, indices = _index.search(query_vec.astype(np.float32), fetch_k)
+    # FAISS search — over-fetch to absorb seeds + duplicates
+    fetch_k           = k + len(seed_movies) + 10
+    scores, indices   = _index.search(query_vec.astype(np.float32), fetch_k)
 
     seed_id_set = {m["id"] for m in seed_movies}
+    seen_ids    = set()       # ← deduplication
     candidates  = []
 
     for rank, idx in enumerate(indices[0]):
         if idx < 0 or idx >= len(_movie_index):
             continue
         m = _movie_index[idx]
-        if m["id"] in seed_id_set:
-            continue
+        mid = m["id"]
+
+        if mid in seed_id_set:
+            continue          # exclude seeds from recommendations
+        if mid in seen_ids:
+            continue          # deduplicate — FAISS can return the same film twice
+
+        seen_ids.add(mid)
         candidates.append({
             **m,
-            # Guarantee these fields are always safe strings, never None
-            "genre_string": _safe_str(m.get("genre_string")),
-            "title":        _safe_str(m.get("title"), fallback="Unknown"),
+            "genre_string":     _safe_str(m.get("genre_string")),
+            "title":            _safe_str(m.get("title"), fallback="Unknown"),
             "similarity_score": float(scores[0][rank]),
+            "rec_score":        0,   # placeholder — filled in by _normalize_scores
         })
         if len(candidates) >= k:
             break
 
-    print(f"  FAISS returned {len(candidates)} candidates")
+    # Normalize scores relative to this batch
+    candidates = _normalize_scores(candidates)
+
+    print(f"  {len(candidates)} unique candidates, "
+          f"scores {min(c['rec_score'] for c in candidates) if candidates else '?'}"
+          f"–{max(c['rec_score'] for c in candidates) if candidates else '?'}")
+
     return candidates, resolved_titles

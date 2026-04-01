@@ -55,6 +55,7 @@ class MovieResult(BaseModel):
     vote_average: float | None = None
     poster_url:   str   | None = None
     explanation:  str   | None = None
+    rec_score:    int   | None = None
 
 
 class RecommendResponse(BaseModel):
