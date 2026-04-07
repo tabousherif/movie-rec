@@ -421,6 +421,56 @@
       letter-spacing:1px;
     }
 
+    /* ── STREAMING BADGES ── */
+    .streaming-pills {
+      position:absolute; bottom:10px; left:10px;
+      display:flex; gap:5px; flex-wrap:wrap;
+      z-index:3;
+    }
+    .streaming-pill {
+      width:26px; height:26px; border-radius:6px;
+      overflow:hidden; border:1.5px solid rgba(255,255,255,0.15);
+      background:rgba(22,20,20,0.75); backdrop-filter:blur(4px);
+      flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    }
+    .streaming-pill img {
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
+    .streaming-pill-text {
+      font-size:0.55rem; font-weight:700; color:var(--cream);
+      padding:0 3px; text-align:center; line-height:1.1;
+    }
+
+    /* Modal streaming row */
+    .modal-streaming {
+      padding:14px 20px 18px;
+      border-top:1px solid rgba(255,255,255,0.06);
+    }
+    .modal-streaming-label {
+      font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em;
+      color:rgba(245,245,241,0.4); margin-bottom:10px;
+    }
+    .modal-streaming-logos {
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    }
+    .modal-provider {
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+    }
+    .modal-provider-logo {
+      width:40px; height:40px; border-radius:10px; overflow:hidden;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.06);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .modal-provider-logo img {
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
+    .modal-provider-name {
+      font-size:0.62rem; color:rgba(245,245,241,0.45);
+      text-align:center; max-width:48px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+
     /* ── EXPLANATION BADGE ── */
     .explanation-strip {
       font-size:0.75rem; color:rgba(245,245,241,0.6);
@@ -788,6 +838,8 @@
         </div>
       </div>
     </div>
+    <!-- Streaming availability row -->
+    <div id="modalStreaming"></div>
   </div>
 </div>
 
@@ -853,6 +905,58 @@ function starRating(vote_average) {
   if (!vote_average) return '';
   const stars = Math.round(vote_average / 2);  // 0-10 → 0-5
   return '★'.repeat(stars) + '☆'.repeat(5 - stars);
+}
+
+// Fallback logos in case TMDB logo_url is null for a provider
+const PROVIDER_LOGOS = {
+  'Netflix':            'https://image.tmdb.org/t/p/original/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg',
+  'Amazon Prime Video': 'https://image.tmdb.org/t/p/original/emthp39XA2yngG1NMQNrZAQ4b8N.jpg',
+  'Disney+':            'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg',
+  'Max':                'https://image.tmdb.org/t/p/original/Ajqyt5aNxNx9m4t0BSRmYMlBOPm.jpg',
+  'HBO Max':            'https://image.tmdb.org/t/p/original/Ajqyt5aNxNx9m4t0BSRmYMlBOPm.jpg',
+  'Apple TV+':          'https://image.tmdb.org/t/p/original/6uhKBfmtzFqOcLousHwZuzcrScK.jpg',
+  'Crave':              'https://image.tmdb.org/t/p/original/3zJBjJEMPbBxvRJJNK7BXNKL4C5.jpg',
+  'Paramount+':         'https://image.tmdb.org/t/p/original/h5DcR0J2EESLitnhR8xLG1QymTE.jpg',
+};
+
+function streamingPillsHTML(providers) {
+  if (!providers || !providers.length) return '';
+  // Show max 4 logos on the poster to avoid crowding
+  return '<div class="streaming-pills">' +
+    providers.slice(0, 4).map(p => {
+      const logo = p.logo_url || PROVIDER_LOGOS[p.name] || '';
+      if (logo) {
+        return `<div class="streaming-pill" title="${p.name}">
+          <img src="${logo}" alt="${p.name}" onerror="this.parentElement.style.display='none'"/>
+        </div>`;
+      }
+      // Text fallback if no logo
+      return `<div class="streaming-pill">
+        <span class="streaming-pill-text">${p.name.substring(0,4)}</span>
+      </div>`;
+    }).join('') +
+  '</div>';
+}
+
+function modalStreamingHTML(providers) {
+  if (!providers || !providers.length) return '';
+  return `<div class="modal-streaming">
+    <div class="modal-streaming-label">Available on in Canada</div>
+    <div class="modal-streaming-logos">
+      ${providers.map(p => {
+        const logo = p.logo_url || PROVIDER_LOGOS[p.name] || '';
+        return `<div class="modal-provider">
+          <div class="modal-provider-logo">
+            ${logo
+              ? `<img src="${logo}" alt="${p.name}" onerror="this.parentElement.innerHTML='<span style=\'font-size:0.6rem;color:rgba(245,245,241,0.5);padding:2px\'>${p.name.substring(0,3)}</span>'">`
+              : `<span style="font-size:0.6rem;color:rgba(245,245,241,0.5);padding:2px">${p.name.substring(0,4)}</span>`
+            }
+          </div>
+          <div class="modal-provider-name">${p.name}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
 }
 
 function runtimeStr(mins) {
@@ -1092,6 +1196,7 @@ function renderRecommendations(recs) {
         />
         <div class="poster-gradient"></div>
         <div class="score-badge ${sClass}">${score}</div>
+        ${streamingPillsHTML(movie.streaming_ca)}
       </div>
       <div class="card-body">
         <div class="card-title">${movie.title}</div>
@@ -1126,6 +1231,10 @@ function openModal(idx) {
   if (m.vote_average) tags.push(`TMDB: ${m.vote_average}/10`);
   if (m.genre_string) m.genre_string.split(',').slice(0,3).forEach(g => tags.push(g.trim()));
   metaEl.innerHTML = tags.map(t => `<span class="modal-tag">${t}</span>`).join('');
+
+  // Streaming availability
+  const streamingEl = document.getElementById('modalStreaming');
+  streamingEl.innerHTML = modalStreamingHTML(m.streaming_ca || []);
 
   const expEl   = document.getElementById('modalExplanation');
   const expText = document.getElementById('modalExplanationText');
@@ -1172,7 +1281,25 @@ function showSettings() {
 }
 
 homeBtn.addEventListener('click', showHome);
-navLogo.addEventListener('click', showHome);
+navLogo.addEventListener('click', () => {
+  // Fade back to the cinematic splash/enter screen
+  curtain.classList.add('show');
+  setTimeout(() => {
+    app.style.display  = 'none';
+    app.classList.remove('visible');
+    splash.style.display = '';
+    splash.style.opacity = '1';
+    // Reset app state so it's fresh when they re-enter
+    searchInput.value = '';
+    seeds = [];
+    renderSeeds();
+    searchArea.classList.remove('compact');
+    resultsHeader.classList.remove('visible');
+    movieGrid.innerHTML = '';
+    if (prefsOpen) togglePrefs();
+    setTimeout(() => curtain.classList.remove('show'), 80);
+  }, 650);
+});
 settingsBtn.addEventListener('click', showSettings);
 closeSettingsBtn.addEventListener('click', showHome);
 

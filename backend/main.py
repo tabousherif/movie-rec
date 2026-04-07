@@ -46,16 +46,23 @@ class RecommendRequest(BaseModel):
     use_mock:    bool            = Field(default=False)
 
 
+class StreamingProvider(BaseModel):
+    provider_id: int
+    name:        str
+    logo_url:    str | None = None
+
+
 class MovieResult(BaseModel):
-    id:           int
-    title:        str
-    release_year: int   | None = None
-    genre_string: str   | None = None
-    runtime:      int   | None = None
-    vote_average: float | None = None
-    poster_url:   str   | None = None
-    explanation:  str   | None = None
-    rec_score:    int   | None = None
+    id:            int
+    title:         str
+    release_year:  int   | None = None
+    genre_string:  str   | None = None
+    runtime:       int   | None = None
+    vote_average:  float | None = None
+    poster_url:    str   | None = None
+    explanation:   str   | None = None
+    rec_score:     int   | None = None
+    streaming_ca:  list[StreamingProvider] = []
 
 
 class RecommendResponse(BaseModel):
